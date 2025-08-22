@@ -1,0 +1,54 @@
+{
+  "name": "tangle",
+  "version": "1.0.0",
+  "description": "A node editor application with graph visualization",
+  "main": "main.js",
+  "homepage": "./",
+  "scripts": {
+    "start": "concurrently \"npm run react-start\" \"wait-on http://localhost:3000 && npm run electron\"",
+    "react-start": "react-scripts start",
+    "electron": "electron .",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "package": "npm run build && electron-builder"
+  },
+  "keywords": [
+    "electron",
+    "react",
+    "node-editor",
+    "graph"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/react-resizable": "^3.0.8",
+    "better-sqlite3": "^12.2.0",
+    "cytoscape": "^3.33.1",
+    "electron": "^37.3.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-draggable": "^4.4.6",
+    "react-resizable": "^3.0.5",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "electron-builder": "^26.0.12",
+    "electron-rebuild": "^3.2.9",
+    "react-scripts": "^5.0.1",
+    "wait-on": "^8.0.4"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
