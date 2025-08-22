@@ -6,13 +6,19 @@ const WorkspaceView = ({ notes, links, onCreateNote, onUpdateNote, onDeleteNote,
   const [selectedNotes, setSelectedNotes] = useState(new Set());
   const [isCreatingLink, setIsCreatingLink] = useState(false);
   const [linkStart, setLinkStart] = useState(null);
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [isWheelPressed, setIsWheelPressed] = useState(false);
 
   // Handle workspace double-click to create new note
   const handleWorkspaceDoubleClick = useCallback((e) => {
-    if (e.target === e.currentTarget) {
+    // Only create note if not clicking on a note or its children
+    if (!e.target.closest('.note')) {
       const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      // Convert screen coordinates to workspace coordinates
+      const x = (e.clientX - rect.left - transform.x) / transform.scale;
+      const y = (e.clientY - rect.top - transform.y) / transform.scale;
       
       onCreateNote({
         x: x - 150, // Center the note on click
@@ -23,7 +29,7 @@ const WorkspaceView = ({ notes, links, onCreateNote, onUpdateNote, onDeleteNote,
         content: ''
       });
     }
-  }, [onCreateNote]);
+  }, [onCreateNote, transform]);
 
   // Handle note selection
   const handleNoteSelect = useCallback((noteId, isSelected) => {
@@ -64,6 +70,85 @@ const WorkspaceView = ({ notes, links, onCreateNote, onUpdateNote, onDeleteNote,
     setLinkStart(null);
     setIsCreatingLink(false);
   }, []);
+
+  // Handle wheel event for zoom or pan
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    
+    if (isWheelPressed) {
+      // Pan when wheel is held down
+      const deltaX = e.deltaX || 0;
+      const deltaY = e.deltaY || 0;
+      
+      setTransform(prev => ({
+        ...prev,
+        x: prev.x - deltaX,
+        y: prev.y - deltaY
+      }));
+    } else {
+      // Zoom with wheel scroll
+      const rect = e.currentTarget.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      const newScale = Math.max(0.1, Math.min(3, transform.scale * delta));
+      
+      // Zoom towards mouse position
+      const newX = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+      const newY = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+      
+      setTransform({ x: newX, y: newY, scale: newScale });
+    }
+  }, [transform, isWheelPressed]);
+
+  // Handle mouse down for panning
+  const handleMouseDown = useCallback((e) => {
+    if (e.button === 1) {
+      // Middle mouse button (wheel) - set wheel pressed state and start panning
+      e.preventDefault();
+      setIsWheelPressed(true);
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
+    } else if (e.target === e.currentTarget && e.button === 0) {
+      // Left mouse button in empty area
+      e.preventDefault();
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
+    }
+  }, [transform]);
+
+  // Handle mouse move for panning
+  const handleMouseMove = useCallback((e) => {
+    if (isPanning) {
+      e.preventDefault();
+      setTransform(prev => ({
+        ...prev,
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y
+      }));
+    }
+  }, [isPanning, panStart]);
+
+  // Handle mouse up for panning
+  const handleMouseUp = useCallback((e) => {
+    if (e.button === 1) {
+      setIsWheelPressed(false);
+    }
+    setIsPanning(false);
+  }, []);
+
+  // Add global mouse event listeners for panning
+  useEffect(() => {
+    if (isPanning) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isPanning, handleMouseMove, handleMouseUp]);
 
   // Handle escape key to cancel linking
   useEffect(() => {
@@ -145,15 +230,51 @@ const WorkspaceView = ({ notes, links, onCreateNote, onUpdateNote, onDeleteNote,
   };
 
   return (
-    <div className="workspace-view" onDoubleClick={handleWorkspaceDoubleClick}>
-      {renderLinks()}
-      
-      {notes.length === 0 && (
-        <div className="workspace-instructions">
-          <h3>Welcome to Tangle</h3>
-          <p>Double-click anywhere to create your first note</p>
-        </div>
-      )}
+    <div 
+      className="workspace-view" 
+      onDoubleClick={handleWorkspaceDoubleClick}
+      onWheel={handleWheel}
+      onMouseDown={handleMouseDown}
+      style={{
+        overflow: 'hidden',
+        cursor: isPanning ? 'grabbing' : 'default'
+      }}
+    >
+      <div
+        className="workspace-content"
+        style={{
+          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
+          transformOrigin: '0 0',
+          width: '100%',
+          height: '100%',
+          position: 'relative'
+        }}
+      >
+        {renderLinks()}
+        
+        {notes.length === 0 && (
+          <div className="workspace-instructions">
+             <h3>Welcome to Tangle</h3>
+             <p>Double-click anywhere to create your first note</p>
+             <p><small>Use Wheel to zoom, Hold wheel + scroll to pan, or drag in empty area to pan</small></p>
+           </div>
+        )}
+        
+        {notes.map(note => (
+          <Note
+            key={note.id}
+            note={note}
+            isSelected={selectedNotes.has(note.id)}
+            onUpdate={onUpdateNote}
+            onDelete={onDeleteNote}
+            onSelect={handleNoteSelect}
+            onStartLink={handleStartLink}
+            onEndLink={handleEndLink}
+            isCreatingLink={isCreatingLink}
+            linkStart={linkStart}
+          />
+        ))}
+      </div>
       
       {isCreatingLink && (
         <div className="link-creation-overlay">
@@ -164,20 +285,23 @@ const WorkspaceView = ({ notes, links, onCreateNote, onUpdateNote, onDeleteNote,
         </div>
       )}
       
-      {notes.map(note => (
-        <Note
-          key={note.id}
-          note={note}
-          isSelected={selectedNotes.has(note.id)}
-          onUpdate={onUpdateNote}
-          onDelete={onDeleteNote}
-          onSelect={handleNoteSelect}
-          onStartLink={handleStartLink}
-          onEndLink={handleEndLink}
-          isCreatingLink={isCreatingLink}
-          linkStart={linkStart}
-        />
-      ))}
+      {/* Zoom indicator */}
+      <div 
+        className="zoom-indicator"
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          right: '20px',
+          background: 'rgba(0, 0, 0, 0.7)',
+          color: 'white',
+          padding: '8px 12px',
+          borderRadius: '4px',
+          fontSize: '12px',
+          pointerEvents: 'none'
+        }}
+      >
+        {Math.round(transform.scale * 100)}%
+      </div>
     </div>
   );
 };

@@ -11,4 +11,3 @@ root.render(
 );
 
 // Log that React app has started
-console.log('React app started successfully');

@@ -23,7 +23,7 @@ function App() {
         ]);
         setNotes(notesData);
         setLinks(linksData);
-        console.log('Loaded data:', { notes: notesData.length, links: linksData.length });
+    
       } else {
         // Browser testing mode - load test data
         const testNotes = [
@@ -55,7 +55,7 @@ function App() {
         const testLinks = [];
         setNotes(testNotes);
         setLinks(testLinks);
-        console.log('Loaded test data for browser:', { notes: testNotes.length, links: testLinks.length });
+  
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -83,7 +83,7 @@ function App() {
           parent_id: noteData.parent_id || null
         };
         setNotes(prev => [newNote, ...prev]);
-        console.log('Created note (browser mode):', newNote);
+    
         return newNote;
       }
     } catch (error) {
@@ -108,7 +108,7 @@ function App() {
         setNotes(prev => prev.map(note => 
           note.id === noteData.id ? updatedNote : note
         ));
-        console.log('Updated note (browser mode):', updatedNote);
+    
         return updatedNote;
       }
     } catch (error) {
@@ -130,7 +130,7 @@ function App() {
         setLinks(prev => prev.filter(link => 
           link.source_note_id !== noteId && link.target_note_id !== noteId
         ));
-        console.log('Deleted note (browser mode):', noteId);
+    
       }
     } catch (error) {
       console.error('Error deleting note:', error);
@@ -161,7 +161,7 @@ function App() {
           created_at: new Date().toISOString()
         };
         setLinks(prev => [newLink, ...prev]);
-        console.log('Created link (browser mode):', newLink);
+    
         return newLink;
       }
     } catch (error) {

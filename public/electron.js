@@ -16,16 +16,11 @@ function debugLog(message) {
   }
 }
 
-// Install uuid if not already installed
-try {
-  require('uuid');
-} catch (e) {
-   
-  require('child_process').execSync('npm install uuid', { stdio: 'inherit' });
-}
-
 let mainWindow;
 let db;
+
+// Check if we're in development mode
+const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 // Initialize database
 function initDatabase() {
@@ -79,10 +74,11 @@ function initDatabase() {
     // Column already exists
   }
   
-  debugLog('Database initialization complete, IPC handlers ready');
+  debugLog('Database initialization complete');
 }
 
 function createWindow() {
+  debugLog('Creating main window...');
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -90,23 +86,27 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, '../preload.js')
     }
   });
 
-  // Load React development server in development
-  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-  
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:3000');
-    mainWindow.webContents.openDevTools();
-  } else {
-    mainWindow.loadFile(path.join(__dirname, 'build/index.html'));
-  }
+  // Load the app
+  mainWindow.loadURL(
+    isDev
+      ? 'http://localhost:3000'
+      : `file://${path.join(__dirname, '../build/index.html')}`
+  );
 
+  // Open the DevTools in development
+  if (isDev) {
+    mainWindow.webContents.openDevTools();
+  }
+  
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+  
+  debugLog('Main window created successfully');
 }
 
 // Function to register IPC handlers
@@ -216,7 +216,6 @@ function registerIpcHandlers() {
         );
         
         const newNote = db.prepare('SELECT * FROM notes WHERE id = ?').get(newId);
-         
         return newNote;
       } else {
         // Update existing note
@@ -238,7 +237,6 @@ function registerIpcHandlers() {
         );
         
         const updatedNote = db.prepare('SELECT * FROM notes WHERE id = ?').get(noteData.id);
-         
         return updatedNote;
       }
     } catch (error) {
@@ -257,7 +255,6 @@ function registerIpcHandlers() {
       const deleteNoteStmt = db.prepare('DELETE FROM notes WHERE id = ?');
       const result = deleteNoteStmt.run(noteId);
       
-       
       return result.changes > 0;
     } catch (error) {
       console.error('Error deleting note:', error);
@@ -272,7 +269,6 @@ function registerIpcHandlers() {
       }
       const stmt = db.prepare('SELECT * FROM links ORDER BY created_at DESC');
       const links = stmt.all();
-       
       return links;
     } catch (error) {
       console.error('Error getting links:', error);
@@ -302,7 +298,6 @@ function registerIpcHandlers() {
       );
       
       const newLink = db.prepare('SELECT * FROM links WHERE id = ?').get(id);
-       
       return newLink;
     } catch (error) {
       console.error('Error creating link:', error);
@@ -329,9 +324,11 @@ function registerIpcHandlers() {
     if (mainWindow) mainWindow.close();
   });
   
-  console.log('All IPC handlers registered successfully');
+  debugLog('All IPC handlers registered successfully');
 }
 
+// This method will be called when Electron has finished
+// initialization and is ready to create browser windows.
 app.whenReady().then(() => {
   debugLog('App is ready, initializing...');
   initDatabase();
@@ -355,6 +352,7 @@ app.whenReady().then(() => {
   });
 });
 
+// Quit when all windows are closed, except on macOS
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     if (db) db.close();

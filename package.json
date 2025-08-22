@@ -11,7 +11,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "package": "npm run build && electron-builder"
+    "package": "npm run build && electron-builder",
+    "postinstall": "electron-builder install-app-deps"
   },
   "keywords": [
     "electron",
@@ -25,7 +26,6 @@
     "@types/react-resizable": "^3.0.8",
     "better-sqlite3": "^12.2.0",
     "cytoscape": "^3.33.1",
-    "electron": "^37.3.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-draggable": "^4.4.6",
@@ -34,8 +34,8 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.0",
+    "electron": "^37.3.1",
     "electron-builder": "^26.0.12",
-    "electron-rebuild": "^3.2.9",
     "react-scripts": "^5.0.1",
     "wait-on": "^8.0.4"
   },
@@ -50,5 +50,27 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "build": {
+    "appId": "com.tangle.app",
+    "productName": "Tangle",
+    "directories": {
+      "output": "dist3"
+    },
+    "files": [
+      "build/**/*",
+      "main.js",
+      "preload.js",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

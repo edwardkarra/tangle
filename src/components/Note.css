@@ -85,6 +85,9 @@
   font-weight: 600;
   outline: none;
   cursor: move;
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .note-title:focus {
@@ -116,8 +119,19 @@
   color: #ffffff;
 }
 
+.note-body-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+}
+
 .note-body {
   flex: 1;
+  width: 100%;
+  height: 100%;
   padding: 12px;
   background: transparent;
   border: none;
@@ -127,6 +141,38 @@
   resize: none;
   outline: none;
   font-family: inherit;
+  box-sizing: border-box;
+  overflow: auto;
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.note-body-display {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: auto;
+  cursor: text;
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.note-title-display {
+  cursor: text;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  user-select: text;
+}
+
+.note-title-display:hover,
+.note-body-display:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .note-body::placeholder {

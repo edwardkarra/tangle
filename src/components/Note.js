@@ -14,7 +14,8 @@ const Note = ({
 }) => {
   const [title, setTitle] = useState(note.title || '');
   const [content, setContent] = useState(note.content || '');
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
   const [showConnectionPoints, setShowConnectionPoints] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -47,17 +48,26 @@ const Note = ({
     debouncedUpdate({ content: newContent });
   }, [debouncedUpdate]);
 
-  // Handle mouse down for dragging
+  // Handle mouse down for dragging - any mouse hold on note triggers drag
   const handleMouseDown = useCallback((e) => {
-    if (e.target.closest('.note-header') && !e.target.closest('input')) {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragging(true);
-      setDragStart({
-        x: e.clientX - (note.x || 0),
-        y: e.clientY - (note.y || 0)
-      });
+    // Don't start drag if clicking on input fields, buttons, connection points, or editable areas
+    if (e.target.tagName === 'INPUT' || 
+        e.target.tagName === 'TEXTAREA' || 
+        e.target.tagName === 'BUTTON' ||
+        e.target.closest('.connection-point') ||
+        e.target.closest('.resize-handle') ||
+        e.target.closest('.note-title-display') ||
+        e.target.closest('.note-body-display')) {
+      return;
     }
+    
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - (note.x || 0),
+      y: e.clientY - (note.y || 0)
+    });
   }, [note.x, note.y]);
 
   // Handle resize mouse down
@@ -107,6 +117,46 @@ const Note = ({
     e.stopPropagation();
     onSelect(note.id, !isSelected);
   }, [note.id, isSelected, onSelect]);
+
+  // Handle double-click for editing title
+  const handleTitleDoubleClick = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditingTitle(true);
+    // Ensure focus is set after state update
+    setTimeout(() => {
+      const input = noteRef.current?.querySelector('.note-title');
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 0);
+  }, []);
+
+  // Handle double-click for editing content
+  const handleContentDoubleClick = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditingContent(true);
+    // Ensure focus is set after state update
+    setTimeout(() => {
+      const textarea = noteRef.current?.querySelector('.note-body');
+      if (textarea) {
+        textarea.focus();
+        textarea.select();
+      }
+    }, 0);
+  }, []);
+
+  // Handle title blur
+  const handleTitleBlur = useCallback(() => {
+    setIsEditingTitle(false);
+  }, []);
+
+  // Handle content blur
+  const handleContentBlur = useCallback(() => {
+    setIsEditingContent(false);
+  }, []);
 
   // Handle connection point click
   const handleConnectionClick = useCallback((e, position) => {
@@ -178,15 +228,39 @@ const Note = ({
     >
       <div className="note-content" style={{ width: '100%', height: '100%' }}>
         <div className="note-header">
-          <input
-            type="text"
-            value={title}
-            onChange={handleTitleChange}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            placeholder="Note title"
-            className="note-title"
-          />
+          {isEditingTitle ? (
+            <input
+              type="text"
+              value={title}
+              onChange={handleTitleChange}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onBlur={handleTitleBlur}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === 'Escape') {
+                  handleTitleBlur();
+                }
+              }}
+              placeholder="Note title"
+              className="note-title"
+              tabIndex={0}
+              autoFocus
+            />
+          ) : (
+            <div
+              className="note-title-display"
+              onDoubleClick={handleTitleDoubleClick}
+              style={{
+                padding: '8px',
+                minHeight: '20px',
+                cursor: 'text',
+                borderRadius: '4px',
+                backgroundColor: 'transparent'
+              }}
+            >
+              {title || 'Double-click to edit title'}
+            </div>
+          )}
           <button
             onClick={handleDelete}
             className="delete-button"
@@ -196,16 +270,38 @@ const Note = ({
           </button>
         </div>
         <div className="note-body-container">
-          <textarea
-            value={content}
-            onChange={handleContentChange}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onFocus={() => setIsEditing(true)}
-            onBlur={() => setIsEditing(false)}
-            className="note-body"
-            placeholder="Start typing..."
-          />
+          {isEditingContent ? (
+            <textarea
+              value={content}
+              onChange={handleContentChange}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onBlur={handleContentBlur}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  handleContentBlur();
+                }
+              }}
+              className="note-body"
+              placeholder="Start typing..."
+              tabIndex={0}
+              autoFocus
+            />
+          ) : (
+            <div
+              className="note-body-display"
+              onDoubleClick={handleContentDoubleClick}
+              style={{
+                padding: '12px',
+                cursor: 'text',
+                borderRadius: '4px',
+                backgroundColor: 'transparent',
+                whiteSpace: 'pre-wrap'
+              }}
+            >
+              {content || 'Double-click to edit content'}
+            </div>
+          )}
         </div>
       </div>
       

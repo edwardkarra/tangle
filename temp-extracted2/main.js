@@ -2,19 +2,6 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
-const fs = require('fs');
-
-// Debug logging function
-function debugLog(message) {
-  const timestamp = new Date().toISOString();
-  const logMessage = `${timestamp}: ${message}\n`;
-  console.log(message);
-  try {
-    fs.appendFileSync('debug.log', logMessage);
-  } catch (e) {
-    // Ignore file write errors
-  }
-}
 
 // Install uuid if not already installed
 try {
@@ -29,9 +16,9 @@ let db;
 
 // Initialize database
 function initDatabase() {
-  debugLog('Initializing database...');
+  console.log('Initializing database...');
   db = new Database('tangle.db');
-  debugLog('Database connection established');
+  console.log('Database connection established');
   
   // Create notes table
   db.exec(`
@@ -79,7 +66,7 @@ function initDatabase() {
     // Column already exists
   }
   
-  debugLog('Database initialization complete, IPC handlers ready');
+  console.log('Database initialization complete, IPC handlers ready');
 }
 
 function createWindow() {
@@ -111,7 +98,7 @@ function createWindow() {
 
 // Function to register IPC handlers
 function registerIpcHandlers() {
-  debugLog('Registering IPC handlers...');
+  console.log('Registering IPC handlers...');
   
   // IPC handlers for database operations
   ipcMain.handle('db:getAllNotes', async () => {
@@ -333,17 +320,17 @@ function registerIpcHandlers() {
 }
 
 app.whenReady().then(() => {
-  debugLog('App is ready, initializing...');
+  console.log('App is ready, initializing...');
   initDatabase();
   
   // Add a small delay to ensure everything is properly initialized
   setTimeout(() => {
-    debugLog('Registering IPC handlers after delay...');
+    console.log('Registering IPC handlers after delay...');
     registerIpcHandlers();
     
     // Ensure IPC handlers are ready before creating window
     process.nextTick(() => {
-      debugLog('Creating window...');
+      console.log('Creating window...');
       createWindow();
     });
   }, 100);
