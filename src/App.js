@@ -24,6 +24,38 @@ function App() {
         setNotes(notesData);
         setLinks(linksData);
         console.log('Loaded data:', { notes: notesData.length, links: linksData.length });
+      } else {
+        // Browser testing mode - load test data
+        const testNotes = [
+          {
+            id: 'test-note-1',
+            title: 'Test Note 1',
+            content: 'This is the first test note',
+            x: 100,
+            y: 100,
+            width: 300,
+            height: 200,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            parent_id: null
+          },
+          {
+            id: 'test-note-2',
+            title: 'Test Note 2',
+            content: 'This is the second test note',
+            x: 500,
+            y: 200,
+            width: 300,
+            height: 200,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            parent_id: null
+          }
+        ];
+        const testLinks = [];
+        setNotes(testNotes);
+        setLinks(testLinks);
+        console.log('Loaded test data for browser:', { notes: testNotes.length, links: testLinks.length });
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -108,8 +140,28 @@ function App() {
   const handleCreateLink = async (linkData) => {
     try {
       if (window.electronAPI) {
-        const newLink = await window.electronAPI.db.createLink(linkData);
+        const newLink = await window.electronAPI.db.createLink({
+          source_note_id: linkData.sourceId,
+          target_note_id: linkData.targetId,
+          source_position: linkData.sourcePosition,
+          target_position: linkData.targetPosition,
+          type: linkData.type
+        });
         setLinks(prev => [newLink, ...prev]);
+        return newLink;
+      } else {
+        // Fallback for browser testing
+        const newLink = {
+          id: Date.now().toString(),
+          source_note_id: linkData.sourceId,
+          target_note_id: linkData.targetId,
+          source_position: linkData.sourcePosition,
+          target_position: linkData.targetPosition,
+          type: linkData.type || 'default',
+          created_at: new Date().toISOString()
+        };
+        setLinks(prev => [newLink, ...prev]);
+        console.log('Created link (browser mode):', newLink);
         return newLink;
       }
     } catch (error) {
@@ -140,6 +192,7 @@ function App() {
         {currentView === 'workspace' ? (
           <WorkspaceView 
             notes={notes}
+            links={links}
             onCreateNote={handleCreateNote}
             onUpdateNote={handleUpdateNote}
             onDeleteNote={handleDeleteNote}

@@ -59,3 +59,7 @@ app/
 
 # Package lock files (uncomment if you prefer yarn)
 # package-lock.json
+
+*.pdf
+*.md
+!readme.md
