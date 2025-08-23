@@ -87,6 +87,7 @@ function createWindow() {
     width: 1200,
     height: 800,
     frame: false,
+    icon: path.join(__dirname, 'public', 'tangle.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
