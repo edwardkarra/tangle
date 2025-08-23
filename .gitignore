@@ -63,3 +63,4 @@ app/
 *.pdf
 *.md
 !readme.md
+dist*/*

@@ -6,39 +6,36 @@ A powerful node editor application with graph visualization for creating interco
 
 Tangle is an Electron-based application that combines the flexibility of free-form note-taking with the power of graph visualization. Create notes, link them together, and visualize your knowledge as an interactive graph.
 
-## Current Features
+## Features
 
 ### 📝 Note Management
-- **Create Notes**: Double-click anywhere in the workspace to create a new note
-- **Rich Text Editing**: Edit note titles and content with a clean, intuitive interface
-- **Drag & Drop**: Move notes freely around the workspace
-- **Resizable Notes**: Adjust note dimensions using the resize handle
-- **Auto-save**: Changes are automatically saved with debouncing to prevent excessive database calls
-- **Delete Notes**: Remove notes with confirmation dialog
+- [x] **Create Notes**: Double-click anywhere in the workspace to create a new note
+- [x] **Rich Text Editing**: Edit note titles and content with a clean, intuitive interface
+- [x] **Drag & Drop**: Move notes freely around the workspace
+- [x] **Resizable Notes**: Adjust note dimensions using the resize handle
+- [x] **Auto-save**: Changes are automatically saved with debouncing to prevent excessive database calls
+- [x] **Delete Notes**: Remove notes with confirmation dialog
 
 ### 🔗 Linking System
-- **Visual Connection Points**: Hover over notes to see connection points (top, right, bottom, left)
-- **Interactive Linking**: Click and drag between connection points to create links
-- **Link Management**: Links are automatically managed and stored in the database
-- **Link Visualization**: See connections between notes in both workspace and timeline views
+- [x] **Visual Connection Points**: Hover over notes to see connection points (top, right, bottom, left)
+- [x] **Interactive Linking**: Click two connection points to create links
+- [ ] **Link Management**: Select and delete links
+- [-] **Link Visualization**: See connections between notes in both workspace and timeline views
 
 ### 📊 Dual View System
-- **Workspace View**: Free-form canvas for creating and organizing notes
+- [x] **Workspace View**: Free-form canvas for creating and organizing notes
   - Drag and drop notes anywhere
   - Real-time editing and positioning
   - Visual link creation interface
   - Welcome instructions for new users
 
-- **Timeline View**: Graph visualization powered by Cytoscape.js
-  - Interactive node-link diagram
-  - Zoom and pan capabilities
-  - Node positioning synchronization with workspace
-  - Visual styling for nodes and edges
+- [ ] **Timeline View**: Graph visualization powered by Cytoscape.js
+  - Timeline representation of note updates
+  - Relationship links between notes
 
 ### 💾 Data Persistence
 - **SQLite Database**: Local storage with `better-sqlite3` for high performance
 - **Structured Schema**: Separate tables for notes and links with proper relationships
-- **Version Control Ready**: Database file can be included or excluded from version control
 - **Cross-platform**: Works on Windows, macOS, and Linux
 
 ### 🎨 User Interface
@@ -50,29 +47,21 @@ Tangle is an Electron-based application that combines the flexibility of free-fo
 
 ## Vision
 
-Tangle aims to become a comprehensive knowledge management and idea visualization tool with the following planned features:
-
-### 🎯 Advanced Linking
-- **Line-to-Line Connections**: Link specific lines or bullet points between notes
-- **Typed Relationships**: Different link types (reference, dependency, similarity, etc.)
-- **Bidirectional Links**: Automatic backlink discovery and visualization
-- **Link Annotations**: Add context and descriptions to connections
+Tangle aims to become a comprehensive note-taking management and idea visualization tool with the following planned features:
 
 ### 📈 Enhanced Visualization
 - **Timeline Filtering**: Filter graph by date ranges and time periods
-- **Layout Algorithms**: Multiple graph layout options (force-directed, hierarchical, circular)
 - **Visual Clustering**: Group related notes automatically
 - **Export Options**: Save graphs as images or interactive HTML
 
 ### 🔄 Version Control & History
 - **Note Versioning**: Automatic versioning when notes are edited after time thresholds
 - **Change Tracking**: Visual diff between note versions
-- **Branching**: Create alternative versions of notes
 - **History Timeline**: Navigate through the evolution of your knowledge base
 
 ### 🎨 Rich Content Support
 - **Advanced Text Editor**: Rich formatting with toolbar (bold, italic, lists, etc.)
-- **Media Embedding**: Images, videos, and file attachments
+- **Media Embedding**: Images, videos, link and file attachments
 - **Code Syntax Highlighting**: Support for multiple programming languages
 - **Mathematical Notation**: LaTeX support for equations and formulas
 
@@ -80,13 +69,9 @@ Tangle aims to become a comprehensive knowledge management and idea visualizatio
 - **Full-text Search**: Find content across all notes
 - **Tag System**: Organize notes with hierarchical tags
 - **Smart Suggestions**: AI-powered link recommendations
-- **Graph Queries**: Query the knowledge graph with graph-based search
 
 ### 📱 Collaboration & Sharing
-- **Export/Import**: Share knowledge graphs between users
-- **Collaboration Mode**: Real-time collaborative editing
-- **Publishing**: Generate static websites from knowledge graphs
-- **API Access**: Programmatic access to notes and links
+- **Send/Recieve**: Share notes and note groups between users
 
 ## Getting Started
 
@@ -157,8 +142,4 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 
 ## License
 
-ISC License - see package.json for details.
-
-## Roadmap
-
-See `specifications.md` and `architecture_description.md` for detailed development plans and technical architecture information.
+MIT License - see package.json for details.
