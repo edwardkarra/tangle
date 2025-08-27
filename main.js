@@ -1,103 +1,29 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const Database = require('better-sqlite3');
-const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
-
-// Debug logging function
-function debugLog(message) {
-  const timestamp = new Date().toISOString();
-  const logMessage = `${timestamp}: ${message}\n`;
-  console.log(message);
-  try {
-    fs.appendFileSync('debug.log', logMessage);
-  } catch (e) {
-    // Ignore file write errors
-  }
-}
-
-// Install uuid if not already installed
-try {
-  require('uuid');
-} catch (e) {
-   
-  require('child_process').execSync('npm install uuid', { stdio: 'inherit' });
-}
+const { v4: uuidv4 } = require('uuid');
 
 let mainWindow;
-let db;
-
-// Initialize database
-function initDatabase() {
-  debugLog('Initializing database...');
-  db = new Database('tangle.db');
-  debugLog('Database connection established');
-  
-  // Create notes table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS notes (
-      id TEXT PRIMARY KEY,
-      title TEXT,
-      content TEXT,
-      x INTEGER,
-      y INTEGER,
-      width INTEGER,
-      height INTEGER,
-      created_at TEXT,
-      updated_at TEXT,
-      parent_id TEXT,
-      FOREIGN KEY (parent_id) REFERENCES notes(id)
-    )
-  `);
-  
-  // Create links table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS links (
-      id TEXT PRIMARY KEY,
-      source_note_id TEXT,
-      source_line_index INTEGER,
-      target_note_id TEXT,
-      target_line_index INTEGER,
-      source_position TEXT,
-      target_position TEXT,
-      type TEXT,
-      created_at TEXT,
-      FOREIGN KEY (source_note_id) REFERENCES notes(id),
-      FOREIGN KEY (target_note_id) REFERENCES notes(id)
-    )
-  `);
-  
-  // Add new columns to existing links table if they don't exist
-  try {
-    db.exec('ALTER TABLE links ADD COLUMN source_position TEXT');
-  } catch (e) {
-    // Column already exists
-  }
-  try {
-    db.exec('ALTER TABLE links ADD COLUMN target_position TEXT');
-  } catch (e) {
-    // Column already exists
-  }
-  
-  debugLog('Database initialization complete, IPC handlers ready');
-}
+let notesFilePath;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    frame: false,
-    icon: path.join(__dirname, 'public', 'tangle.ico'),
+    minWidth: 800,
+    minHeight: 600,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.js')
-    }
+    },
+    titleBarStyle: 'default',
+    show: false
   });
 
-  // Load React development server in development
-  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-  
+  // Load the app
+  const isDev = !app.isPackaged;
   if (isDev) {
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
@@ -105,250 +31,180 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, 'build/index.html'));
   }
 
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
 
-// Function to register IPC handlers
-function registerIpcHandlers() {
-  debugLog('Registering IPC handlers...');
+function initializeDataStorage() {
+  const userDataPath = app.getPath('userData');
+  notesFilePath = path.join(userDataPath, 'notes.json');
   
-  // IPC handlers for database operations
-  ipcMain.handle('db:getAllNotes', async () => {
-    try {
-      if (!db) {
-        throw new Error('Database not initialized');
-      }
-      const stmt = db.prepare('SELECT * FROM notes ORDER BY updated_at DESC');
-      return stmt.all();
-    } catch (error) {
-      console.error('Error getting all notes:', error);
-      throw error;
-    }
-  });
-
-  ipcMain.handle('db:createNote', async (event, noteData) => {
-    try {
-      if (!db) {
-        throw new Error('Database not initialized');
-      }
-      const id = uuidv4();
-      const now = new Date().toISOString();
-      
-      const stmt = db.prepare(`
-        INSERT INTO notes (id, title, content, x, y, width, height, created_at, updated_at, parent_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      
-      stmt.run(
-        id,
-        noteData.title || 'New Note',
-        noteData.content || '',
-        noteData.x || 100,
-        noteData.y || 100,
-        noteData.width || 300,
-        noteData.height || 200,
-        now,
-        now,
-        noteData.parent_id || null
-      );
-      
-      // Return the created note
-      const getStmt = db.prepare('SELECT * FROM notes WHERE id = ?');
-      return getStmt.get(id);
-    } catch (error) {
-      console.error('Error creating note:', error);
-      throw error;
-    }
-  });
-
-  ipcMain.handle('db:updateNote', async (event, noteData) => {
-    try {
-      const currentNote = db.prepare('SELECT * FROM notes WHERE id = ?').get(noteData.id);
-      if (!currentNote) {
-        throw new Error('Note not found');
-      }
-      
-      const now = new Date();
-      const lastUpdated = new Date(currentNote.updated_at);
-      const hoursDiff = (now - lastUpdated) / (1000 * 60 * 60);
-      
-      // If more than 1 hour has passed, create a new version
-      if (hoursDiff > 1) {
-        const newId = uuidv4();
-        const nowISO = now.toISOString();
-        
-        // Create new note version
-        const insertStmt = db.prepare(`
-          INSERT INTO notes (id, title, content, x, y, width, height, created_at, updated_at, parent_id)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        insertStmt.run(
-          newId,
-          noteData.title,
-          noteData.content,
-          noteData.x,
-          noteData.y,
-          noteData.width,
-          noteData.height,
-          nowISO,
-          nowISO,
-          currentNote.id
-        );
-        
-        // Create update link
-        const linkStmt = db.prepare(`
-          INSERT INTO links (id, source_note_id, source_line_index, target_note_id, target_line_index, source_position, target_position, type, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        linkStmt.run(
-          uuidv4(),
-          newId,
-          0,
-          currentNote.id,
-          0,
-          null,
-          null,
-          'update',
-          nowISO
-        );
-        
-        const newNote = db.prepare('SELECT * FROM notes WHERE id = ?').get(newId);
-         
-        return newNote;
-      } else {
-        // Update existing note
-        const updateStmt = db.prepare(`
-          UPDATE notes 
-          SET title = ?, content = ?, x = ?, y = ?, width = ?, height = ?, updated_at = ?
-          WHERE id = ?
-        `);
-        
-        updateStmt.run(
-          noteData.title,
-          noteData.content,
-          noteData.x,
-          noteData.y,
-          noteData.width,
-          noteData.height,
-          now.toISOString(),
-          noteData.id
-        );
-        
-        const updatedNote = db.prepare('SELECT * FROM notes WHERE id = ?').get(noteData.id);
-         
-        return updatedNote;
-      }
-    } catch (error) {
-      console.error('Error updating note:', error);
-      throw error;
-    }
-  });
-
-  ipcMain.handle('db:deleteNote', async (event, noteId) => {
-    try {
-      // Delete associated links first
-      const deleteLinkStmt = db.prepare('DELETE FROM links WHERE source_note_id = ? OR target_note_id = ?');
-      deleteLinkStmt.run(noteId, noteId);
-      
-      // Delete the note
-      const deleteNoteStmt = db.prepare('DELETE FROM notes WHERE id = ?');
-      const result = deleteNoteStmt.run(noteId);
-      
-       
-      return result.changes > 0;
-    } catch (error) {
-      console.error('Error deleting note:', error);
-      throw error;
-    }
-  });
-
-  ipcMain.handle('db:getAllLinks', async () => {
-    try {
-      if (!db) {
-        throw new Error('Database not initialized');
-      }
-      const stmt = db.prepare('SELECT * FROM links ORDER BY created_at DESC');
-      const links = stmt.all();
-       
-      return links;
-    } catch (error) {
-      console.error('Error getting links:', error);
-      throw error;
-    }
-  });
-
-  ipcMain.handle('db:createLink', async (event, linkData) => {
-    try {
-      const id = uuidv4();
-      const now = new Date().toISOString();
-      const stmt = db.prepare(`
-        INSERT INTO links (id, source_note_id, source_line_index, target_note_id, target_line_index, source_position, target_position, type, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      
-      stmt.run(
-        id,
-        linkData.source_note_id,
-        linkData.source_line_index || 0,
-        linkData.target_note_id,
-        linkData.target_line_index || 0,
-        linkData.source_position || null,
-        linkData.target_position || null,
-        linkData.type || 'reference',
-        now
-      );
-      
-      const newLink = db.prepare('SELECT * FROM links WHERE id = ?').get(id);
-       
-      return newLink;
-    } catch (error) {
-      console.error('Error creating link:', error);
-      throw error;
-    }
-  });
-
-  // Window control handlers
-  ipcMain.handle('window:minimize', () => {
-    if (mainWindow) mainWindow.minimize();
-  });
-
-  ipcMain.handle('window:maximize', () => {
-    if (mainWindow) {
-      if (mainWindow.isMaximized()) {
-        mainWindow.unmaximize();
-      } else {
-        mainWindow.maximize();
-      }
-    }
-  });
-
-  ipcMain.handle('window:close', () => {
-    if (mainWindow) mainWindow.close();
-  });
-  
-  console.log('All IPC handlers registered successfully');
+  // Create notes file if it doesn't exist
+  if (!fs.existsSync(notesFilePath)) {
+    const initialData = {
+      notes: {},
+      connections: {},
+      lastModified: Date.now()
+    };
+    fs.writeFileSync(notesFilePath, JSON.stringify(initialData, null, 2));
+  }
 }
 
-app.whenReady().then(() => {
-  debugLog('App is ready, initializing...');
-  initDatabase();
-  
-  // Add a small delay to ensure everything is properly initialized
-  setTimeout(() => {
-    debugLog('Registering IPC handlers after delay...');
-    registerIpcHandlers();
-    
-    // Ensure IPC handlers are ready before creating window
-    process.nextTick(() => {
-      debugLog('Creating window...');
-      createWindow();
-    });
-  }, 100);
+function loadNotes() {
+  try {
+    const data = fs.readFileSync(notesFilePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error loading notes:', error);
+    return { notes: {}, connections: {}, lastModified: Date.now() };
+  }
+}
 
+function saveNotes(data) {
+  try {
+    data.lastModified = Date.now();
+    fs.writeFileSync(notesFilePath, JSON.stringify(data, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error saving notes:', error);
+    return false;
+  }
+}
+
+// IPC Handlers
+ipcMain.handle('get-notes', async () => {
+  return loadNotes();
+});
+
+ipcMain.handle('save-notes', async (event, data) => {
+  return saveNotes(data);
+});
+
+ipcMain.handle('create-note', async (event, noteData) => {
+  const data = loadNotes();
+  const noteId = uuidv4();
+  const note = {
+    id: noteId,
+    content: noteData.content || '',
+    title: noteData.title || '',
+    isMainNote: noteData.isMainNote || false,
+    parentId: noteData.parentId || null,
+    children: [],
+    position: noteData.position || { x: 0, y: 0 },
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+  
+  data.notes[noteId] = note;
+  
+  // Update parent's children array if this note has a parent
+  if (note.parentId && data.notes[note.parentId]) {
+    data.notes[note.parentId].children.push(noteId);
+  }
+  
+  saveNotes(data);
+  return note;
+});
+
+ipcMain.handle('update-note', async (event, noteId, updates) => {
+  const data = loadNotes();
+  if (data.notes[noteId]) {
+    data.notes[noteId] = { ...data.notes[noteId], ...updates, updatedAt: Date.now() };
+    saveNotes(data);
+    return data.notes[noteId];
+  }
+  return null;
+});
+
+ipcMain.handle('delete-note', async (event, noteId) => {
+  const data = loadNotes();
+  if (data.notes[noteId]) {
+    const note = data.notes[noteId];
+    
+    // Remove from parent's children array
+    if (note.parentId && data.notes[note.parentId]) {
+      data.notes[note.parentId].children = data.notes[note.parentId].children.filter(id => id !== noteId);
+    }
+    
+    // Delete all children recursively
+    const deleteChildren = (id) => {
+      const childNote = data.notes[id];
+      if (childNote && childNote.children) {
+        childNote.children.forEach(deleteChildren);
+      }
+      delete data.notes[id];
+      // Remove all connections involving this note
+      Object.keys(data.connections).forEach(connId => {
+        if (data.connections[connId].from === id || data.connections[connId].to === id) {
+          delete data.connections[connId];
+        }
+      });
+    };
+    
+    deleteChildren(noteId);
+    saveNotes(data);
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle('create-connection', async (event, fromId, toId) => {
+  const data = loadNotes();
+  const connectionId = uuidv4();
+  const connection = {
+    id: connectionId,
+    from: fromId,
+    to: toId,
+    createdAt: Date.now()
+  };
+  
+  data.connections[connectionId] = connection;
+  saveNotes(data);
+  return connection;
+});
+
+ipcMain.handle('delete-connection', async (event, connectionId) => {
+  const data = loadNotes();
+  if (data.connections[connectionId]) {
+    delete data.connections[connectionId];
+    saveNotes(data);
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle('export-notes', async () => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Notes',
+    defaultPath: 'tangle-notes.json',
+    filters: [
+      { name: 'JSON Files', extensions: ['json'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+  
+  if (!result.canceled) {
+    const data = loadNotes();
+    try {
+      fs.writeFileSync(result.filePath, JSON.stringify(data, null, 2));
+      return { success: true, path: result.filePath };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  
+  return { success: false, canceled: true };
+});
+
+app.whenReady().then(() => {
+  initializeDataStorage();
+  createWindow();
+  
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -358,11 +214,13 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    if (db) db.close();
     app.quit();
   }
 });
 
 app.on('before-quit', () => {
-  if (db) db.close();
+  // Ensure all data is saved before quitting
+  if (mainWindow) {
+    mainWindow.webContents.send('app-closing');
+  }
 });

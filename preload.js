@@ -3,25 +3,37 @@ const { contextBridge, ipcRenderer } = require('electron');
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Database operations
-  db: {
-    getAllNotes: () => ipcRenderer.invoke('db:getAllNotes'),
-    createNote: (noteData) => ipcRenderer.invoke('db:createNote', noteData),
-    updateNote: (noteData) => ipcRenderer.invoke('db:updateNote', noteData),
-    deleteNote: (noteId) => ipcRenderer.invoke('db:deleteNote', noteId),
-    getAllLinks: () => ipcRenderer.invoke('db:getAllLinks'),
-    createLink: (linkData) => ipcRenderer.invoke('db:createLink', linkData)
+  // Notes operations
+  getNotes: () => ipcRenderer.invoke('get-notes'),
+  saveNotes: (data) => ipcRenderer.invoke('save-notes', data),
+  createNote: (noteData) => ipcRenderer.invoke('create-note', noteData),
+  updateNote: (noteId, updates) => ipcRenderer.invoke('update-note', noteId, updates),
+  deleteNote: (noteId) => ipcRenderer.invoke('delete-note', noteId),
+  
+  // Connection operations
+  createConnection: (fromId, toId) => ipcRenderer.invoke('create-connection', fromId, toId),
+  deleteConnection: (connectionId) => ipcRenderer.invoke('delete-connection', connectionId),
+  
+  // Export functionality
+  exportNotes: () => ipcRenderer.invoke('export-notes'),
+  
+  // App lifecycle events
+  onAppClosing: (callback) => {
+    ipcRenderer.on('app-closing', callback);
   },
   
-  // Window controls
-  window: {
-    minimize: () => ipcRenderer.invoke('window:minimize'),
-    maximize: () => ipcRenderer.invoke('window:maximize'),
-    close: () => ipcRenderer.invoke('window:close')
+  // Remove listeners
+  removeAllListeners: (channel) => {
+    ipcRenderer.removeAllListeners(channel);
   }
 });
 
-// Log that preload script has loaded
-console.log('Preload script loaded successfully');
-console.log('electronAPI exposed:', !!window.electronAPI);
- 
+// Expose a simple API for keyboard shortcuts and window management
+contextBridge.exposeInMainWorld('windowAPI', {
+  platform: process.platform,
+  versions: {
+    node: process.versions.node,
+    chrome: process.versions.chrome,
+    electron: process.versions.electron
+  }
+});

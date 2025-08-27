@@ -1,210 +1,236 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
-import WorkspaceView from './components/WorkspaceView';
-import TimelineView from './components/TimelineView';
-import WindowControls from './components/WindowControls';
+import NoteGraph from './components/NoteGraph';
+import NoteEditor from './components/NoteEditor';
+import Sidebar from './components/Sidebar';
 
 function App() {
-  const [currentView, setCurrentView] = useState('workspace'); // 'workspace' or 'timeline'
-  const [notes, setNotes] = useState([]);
-  const [links, setLinks] = useState([]);
+  const [notes, setNotes] = useState({});
+  const [connections, setConnections] = useState({});
+  const [selectedNote, setSelectedNote] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Load initial data
+  // Load notes on app start
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      if (window.electronAPI) {
-        const [notesData, linksData] = await Promise.all([
-          window.electronAPI.db.getAllNotes(),
-          window.electronAPI.db.getAllLinks()
-        ]);
-        setNotes(notesData);
-        setLinks(linksData);
+    loadNotes();
     
-      } else {
-        // Browser testing mode - load test data
-        const testNotes = [
-          {
-            id: 'test-note-1',
-            title: 'Test Note 1',
-            content: 'This is the first test note',
-            x: 100,
-            y: 100,
-            width: 300,
-            height: 200,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            parent_id: null
-          },
-          {
-            id: 'test-note-2',
-            title: 'Test Note 2',
-            content: 'This is the second test note',
-            x: 500,
-            y: 200,
-            width: 300,
-            height: 200,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            parent_id: null
-          }
-        ];
-        const testLinks = [];
-        setNotes(testNotes);
-        setLinks(testLinks);
-  
+    // Set up keyboard shortcuts
+    const handleKeyDown = (e) => {
+      // Escape to close note editor
+      if (e.key === 'Escape') {
+        setSelectedNote(null);
+      }
+      
+      // Ctrl/Cmd + B to toggle sidebar
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        setSidebarCollapsed(!sidebarCollapsed);
+      }
+    };
+    
+    // Handle custom events from NoteGraph
+    const handleEditNote = (e) => {
+      setSelectedNote(e.detail.noteId);
+    };
+    
+    const handleCreateNoteAtPosition = async (e) => {
+      const { x, y } = e.detail;
+      const newNote = await createNote({
+        content: '',
+        title: 'New Note',
+        position: { x, y }
+      });
+      if (newNote) {
+        setSelectedNote(newNote.id);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('editNote', handleEditNote);
+    window.addEventListener('createNoteAtPosition', handleCreateNoteAtPosition);
+    
+    // Handle app closing
+    if (window.electronAPI) {
+      window.electronAPI.onAppClosing(() => {
+        saveNotes();
+      });
+    }
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('editNote', handleEditNote);
+      window.removeEventListener('createNoteAtPosition', handleCreateNoteAtPosition);
+      if (window.electronAPI) {
+        window.electronAPI.removeAllListeners('app-closing');
+      }
+    };
+  }, [sidebarCollapsed]);
+
+  const loadNotes = async () => {
+    try {
+      setIsLoading(true);
+      if (window.electronAPI) {
+        const data = await window.electronAPI.getNotes();
+        setNotes(data.notes || {});
+        setConnections(data.connections || {});
       }
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading notes:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleCreateNote = async (noteData) => {
+  const saveNotes = async () => {
     try {
       if (window.electronAPI) {
-        const newNote = await window.electronAPI.db.createNote(noteData);
-        setNotes(prev => [newNote, ...prev]);
-        return newNote;
-      } else {
-        // Fallback for browser testing when electronAPI is not available
-        const newNote = {
-          id: Date.now().toString(),
-          title: noteData.title || 'New Note',
-          content: noteData.content || '',
-          x: noteData.x || 100,
-          y: noteData.y || 100,
-          width: noteData.width || 300,
-          height: noteData.height || 200,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          parent_id: noteData.parent_id || null
-        };
-        setNotes(prev => [newNote, ...prev]);
-    
+        await window.electronAPI.saveNotes({
+          notes,
+          connections,
+          lastModified: Date.now()
+        });
+      }
+    } catch (error) {
+      console.error('Error saving notes:', error);
+    }
+  };
+
+  const createNote = useCallback(async (noteData) => {
+    try {
+      if (window.electronAPI) {
+        const newNote = await window.electronAPI.createNote(noteData);
+        setNotes(prev => ({ ...prev, [newNote.id]: newNote }));
         return newNote;
       }
     } catch (error) {
       console.error('Error creating note:', error);
     }
-  };
+  }, []);
 
-  const handleUpdateNote = async (noteData) => {
+  const updateNote = useCallback(async (noteId, updates) => {
     try {
       if (window.electronAPI) {
-        const updatedNote = await window.electronAPI.db.updateNote(noteData);
-        setNotes(prev => prev.map(note => 
-          note.id === noteData.id ? updatedNote : note
-        ));
-        return updatedNote;
-      } else {
-        // Fallback for browser testing
-        const updatedNote = {
-          ...noteData,
-          updated_at: new Date().toISOString()
-        };
-        setNotes(prev => prev.map(note => 
-          note.id === noteData.id ? updatedNote : note
-        ));
-    
-        return updatedNote;
+        const updatedNote = await window.electronAPI.updateNote(noteId, updates);
+        if (updatedNote) {
+          setNotes(prev => ({ ...prev, [noteId]: updatedNote }));
+        }
       }
     } catch (error) {
       console.error('Error updating note:', error);
     }
-  };
+  }, []);
 
-  const handleDeleteNote = async (noteId) => {
+  const deleteNote = useCallback(async (noteId) => {
     try {
       if (window.electronAPI) {
-        await window.electronAPI.db.deleteNote(noteId);
-        setNotes(prev => prev.filter(note => note.id !== noteId));
-        setLinks(prev => prev.filter(link => 
-          link.source_note_id !== noteId && link.target_note_id !== noteId
-        ));
-      } else {
-        // Fallback for browser testing
-        setNotes(prev => prev.filter(note => note.id !== noteId));
-        setLinks(prev => prev.filter(link => 
-          link.source_note_id !== noteId && link.target_note_id !== noteId
-        ));
-    
+        const success = await window.electronAPI.deleteNote(noteId);
+        if (success) {
+          setNotes(prev => {
+            const newNotes = { ...prev };
+            delete newNotes[noteId];
+            return newNotes;
+          });
+          
+          // Remove connections involving this note
+          setConnections(prev => {
+            const newConnections = { ...prev };
+            Object.keys(newConnections).forEach(connId => {
+              if (newConnections[connId].from === noteId || newConnections[connId].to === noteId) {
+                delete newConnections[connId];
+              }
+            });
+            return newConnections;
+          });
+          
+          if (selectedNote === noteId) {
+            setSelectedNote(null);
+          }
+        }
       }
     } catch (error) {
       console.error('Error deleting note:', error);
     }
-  };
+  }, [selectedNote]);
 
-  const handleCreateLink = async (linkData) => {
+  const createConnection = useCallback(async (fromId, toId) => {
     try {
       if (window.electronAPI) {
-        const newLink = await window.electronAPI.db.createLink({
-          source_note_id: linkData.sourceId,
-          target_note_id: linkData.targetId,
-          source_position: linkData.sourcePosition,
-          target_position: linkData.targetPosition,
-          type: linkData.type
-        });
-        setLinks(prev => [newLink, ...prev]);
-        return newLink;
-      } else {
-        // Fallback for browser testing
-        const newLink = {
-          id: Date.now().toString(),
-          source_note_id: linkData.sourceId,
-          target_note_id: linkData.targetId,
-          source_position: linkData.sourcePosition,
-          target_position: linkData.targetPosition,
-          type: linkData.type || 'default',
-          created_at: new Date().toISOString()
-        };
-        setLinks(prev => [newLink, ...prev]);
-    
-        return newLink;
+        const connection = await window.electronAPI.createConnection(fromId, toId);
+        if (connection) {
+          setConnections(prev => ({ ...prev, [connection.id]: connection }));
+        }
       }
     } catch (error) {
-      console.error('Error creating link:', error);
+      console.error('Error creating connection:', error);
     }
-  };
+  }, []);
+
+  const deleteConnection = useCallback(async (connectionId) => {
+    try {
+      if (window.electronAPI) {
+        const success = await window.electronAPI.deleteConnection(connectionId);
+        if (success) {
+          setConnections(prev => {
+            const newConnections = { ...prev };
+            delete newConnections[connectionId];
+            return newConnections;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting connection:', error);
+    }
+  }, []);
+
+
+
+  if (isLoading) {
+    return (
+      <div className="app-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading Tangle...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
-      <WindowControls />
+      <Sidebar 
+        notes={notes}
+        selectedNote={selectedNote}
+        onSelectNote={setSelectedNote}
+        onCreateNote={createNote}
+        onDeleteNote={deleteNote}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
       
-      <div className="view-switcher">
-        <button 
-          className={`view-button ${currentView === 'workspace' ? 'active' : ''}`}
-          onClick={() => setCurrentView('workspace')}
-        >
-          Workspace
-        </button>
-        <button 
-          className={`view-button ${currentView === 'timeline' ? 'active' : ''}`}
-          onClick={() => setCurrentView('timeline')}
-        >
-          Timeline
-        </button>
-      </div>
-
-      <div className="view-container">
-        {currentView === 'workspace' ? (
-          <WorkspaceView 
-            notes={notes}
-            links={links}
-            onCreateNote={handleCreateNote}
-            onUpdateNote={handleUpdateNote}
-            onDeleteNote={handleDeleteNote}
-            onCreateLink={handleCreateLink}
-          />
-        ) : (
-          <TimelineView 
-            notes={notes}
-            links={links}
-            onDeleteNote={handleDeleteNote}
+      <div className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <NoteGraph 
+          notes={notes}
+          connections={connections}
+          selectedNote={selectedNote}
+          onSelectNote={setSelectedNote}
+          onCreateConnection={createConnection}
+          onDeleteConnection={deleteConnection}
+          onUpdateNote={updateNote}
+        />
+        
+        {selectedNote && notes[selectedNote] && (
+          <NoteEditor 
+            note={notes[selectedNote]}
+            onUpdateNote={updateNote}
+            onDeleteNote={deleteNote}
+            onClose={() => setSelectedNote(null)}
           />
         )}
+      </div>
+      
+      <div className="app-shortcuts">
+        <div className="shortcut-hint">Ctrl+B: Toggle Sidebar</div>
+        <div className="shortcut-hint">Esc: Close</div>
+        <div className="shortcut-hint">Double-click: Edit Note / Create Note</div>
       </div>
     </div>
   );
