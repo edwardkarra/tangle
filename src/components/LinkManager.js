@@ -288,9 +288,9 @@ const LinkManager = ({
 
       <style jsx>{`
         .link-manager {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+          background: var(--bg-surface);
+          border-radius: var(--radius-xl);
+          box-shadow: var(--shadow-lg);
           overflow: hidden;
           max-height: 80vh;
           display: flex;
@@ -298,30 +298,30 @@ const LinkManager = ({
         }
         
         .link-manager-empty {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+          background: var(--bg-surface);
+          border-radius: var(--radius-xl);
+          box-shadow: var(--shadow-lg);
           padding: 60px 40px;
           text-align: center;
         }
         
         .empty-state {
-          color: #6c757d;
+          color: var(--text-secondary);
         }
         
         .empty-icon {
           font-size: 48px;
-          margin-bottom: 20px;
+          margin-bottom: var(--spacing-lg);
         }
         
         .empty-state h3 {
-          margin: 0 0 10px;
-          color: #2c3e50;
+          margin: 0 0 var(--spacing-sm);
+          color: var(--text-primary);
         }
         
         .link-manager-header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
+          background: var(--color-primary);
+          color: var(--text-on-primary);
           padding: 25px 30px;
         }
         
@@ -329,7 +329,7 @@ const LinkManager = ({
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 20px;
+          margin-bottom: var(--spacing-lg);
         }
         
         .link-manager-title {
@@ -338,7 +338,7 @@ const LinkManager = ({
           margin: 0;
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: var(--spacing-sm);
         }
         
         .link-icon {
@@ -349,11 +349,11 @@ const LinkManager = ({
           background: none;
           border: none;
           font-size: 24px;
-          color: rgba(255, 255, 255, 0.8);
+          color: var(--text-on-primary-muted);
           cursor: pointer;
           padding: 5px;
           border-radius: 50%;
-          transition: all 0.2s ease;
+          transition: all var(--transition-normal);
           width: 32px;
           height: 32px;
           display: flex;
@@ -362,8 +362,8 @@ const LinkManager = ({
         }
         
         .close-btn:hover {
-          background: rgba(255, 255, 255, 0.1);
-          color: white;
+          background: var(--bg-hover-light);
+          color: var(--text-on-primary);
         }
         
         .selected-note-info {

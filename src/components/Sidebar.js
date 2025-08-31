@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import ThemeToggle from './ThemeToggle';
 
 const Sidebar = ({ 
   notes, 
@@ -124,13 +125,16 @@ const Sidebar = ({
         {!collapsed && (
           <h1 className="sidebar-title">Tangle</h1>
         )}
-        <button 
-          className="toggle-btn" 
-          onClick={onToggleCollapse}
-          title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-        >
-          {collapsed ? '→' : '←'}
-        </button>
+        <div className="header-controls">
+          <ThemeToggle size="sm" />
+          <button 
+            className="toggle-btn" 
+            onClick={onToggleCollapse}
+            title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          >
+            {collapsed ? '→' : '←'}
+          </button>
+        </div>
       </div>
       
       {!collapsed && (

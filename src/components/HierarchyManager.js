@@ -356,74 +356,77 @@ const HierarchyManager = ({
         }
         
         .hierarchy-controls {
-          padding: 20px;
-          background: #f8f9fa;
-          border-bottom: 1px solid #e1e8ed;
+          padding: var(--spacing-lg);
+          background: var(--bg-overlay);
+          border-bottom: 1px solid var(--border-primary);
           display: flex;
           align-items: center;
-          gap: 20px;
+          gap: var(--spacing-lg);
           flex-wrap: wrap;
         }
         
         .view-controls {
           display: flex;
-          gap: 8px;
+          gap: var(--spacing-sm);
         }
         
         .view-btn {
-          padding: 8px 16px;
-          border: 1px solid #d1d5db;
-          background: white;
-          border-radius: 6px;
+          padding: var(--spacing-sm) 16px;
+          border: 1px solid var(--border-secondary);
+          background: var(--bg-surface);
+          border-radius: var(--radius-md);
           font-size: 14px;
           font-weight: 500;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all var(--transition-normal);
+          color: var(--text-primary);
         }
         
         .view-btn:hover {
-          background: #f3f4f6;
+          background: var(--bg-hover);
         }
         
         .view-btn.active {
-          background: #3498db;
-          color: white;
-          border-color: #3498db;
+          background: var(--color-primary);
+          color: var(--text-on-primary);
+          border-color: var(--color-primary);
         }
         
         .sort-controls {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: var(--spacing-sm);
         }
         
         .sort-select {
-          padding: 8px 12px;
-          border: 1px solid #d1d5db;
-          border-radius: 6px;
+          padding: var(--spacing-sm) var(--spacing-md);
+          border: 1px solid var(--border-secondary);
+          border-radius: var(--radius-md);
           font-size: 14px;
-          background: white;
+          background: var(--bg-surface);
+          color: var(--text-primary);
           cursor: pointer;
         }
         
         .expand-controls {
           display: flex;
-          gap: 8px;
+          gap: var(--spacing-sm);
           margin-left: auto;
         }
         
         .control-btn {
-          padding: 6px 12px;
-          border: 1px solid #d1d5db;
-          background: white;
-          border-radius: 4px;
+          padding: 6px var(--spacing-md);
+          border: 1px solid var(--border-secondary);
+          background: var(--bg-surface);
+          border-radius: var(--radius-sm);
           font-size: 12px;
+          color: var(--text-primary);
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all var(--transition-normal);
         }
         
         .control-btn:hover {
-          background: #f3f4f6;
+          background: var(--bg-hover);
         }
         
         .hierarchy-content {
@@ -433,21 +436,21 @@ const HierarchyManager = ({
         }
         
         .note-group {
-          margin-bottom: 8px;
+          margin-bottom: var(--spacing-sm);
         }
         
         .hierarchy-note {
-          background: white;
-          border: 1px solid #e1e8ed;
-          border-radius: 8px;
-          margin: 8px 16px;
+          background: var(--bg-surface);
+          border: 1px solid var(--border-primary);
+          border-radius: var(--radius-md);
+          margin: var(--spacing-sm) 16px;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all var(--transition-normal);
           position: relative;
         }
         
         .hierarchy-note:hover {
-          border-color: #3498db;
+          border-color: var(--color-primary);
           box-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
         }
         

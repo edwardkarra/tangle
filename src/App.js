@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
+import './styles/themes.css';
+import { ThemeProvider } from './contexts/ThemeContext';
 import NoteGraph from './components/NoteGraph';
 import NoteEditor from './components/NoteEditor';
 import Sidebar from './components/Sidebar';
@@ -200,53 +202,57 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="app-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading Tangle...</p>
-      </div>
+      <ThemeProvider>
+        <div className="app-loading">
+          <div className="loading-spinner"></div>
+          <p>Loading Tangle...</p>
+        </div>
+      </ThemeProvider>
     );
   }
 
   return (
-    <div className="app">
-      <Sidebar 
-        notes={notes}
-        selectedNote={selectedNote}
-        onSelectNote={setSelectedNote}
-        onCreateNote={createNote}
-        onDeleteNote={deleteNote}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
-      
-      <div className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-        <NoteGraph 
-          ref={noteGraphRef}
+    <ThemeProvider>
+      <div className="app">
+        <Sidebar 
           notes={notes}
-          connections={connections}
           selectedNote={selectedNote}
           onSelectNote={setSelectedNote}
-          onCreateConnection={createConnection}
-          onDeleteConnection={deleteConnection}
-          onUpdateNote={updateNote}
+          onCreateNote={createNote}
+          onDeleteNote={deleteNote}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         
-        {editingNote && notes[editingNote] && (
-          <NoteEditor 
-            note={notes[editingNote]}
+        <div className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+          <NoteGraph 
+            ref={noteGraphRef}
+            notes={notes}
+            connections={connections}
+            selectedNote={selectedNote}
+            onSelectNote={setSelectedNote}
+            onCreateConnection={createConnection}
+            onDeleteConnection={deleteConnection}
             onUpdateNote={updateNote}
-            onDeleteNote={deleteNote}
-            onClose={() => setEditingNote(null)}
           />
-        )}
+          
+          {editingNote && notes[editingNote] && (
+            <NoteEditor 
+              note={notes[editingNote]}
+              onUpdateNote={updateNote}
+              onDeleteNote={deleteNote}
+              onClose={() => setEditingNote(null)}
+            />
+          )}
+        </div>
+        
+        <div className="app-shortcuts">
+          <div className="shortcut-hint">Ctrl+B: Toggle Sidebar</div>
+          <div className="shortcut-hint">Esc: Close</div>
+          <div className="shortcut-hint">Double-click: Edit Note / Create Note</div>
+        </div>
       </div>
-      
-      <div className="app-shortcuts">
-        <div className="shortcut-hint">Ctrl+B: Toggle Sidebar</div>
-        <div className="shortcut-hint">Esc: Close</div>
-        <div className="shortcut-hint">Double-click: Edit Note / Create Note</div>
-      </div>
-    </div>
+    </ThemeProvider>
   );
 }
 
