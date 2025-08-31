@@ -61,16 +61,21 @@
       "build/**/*",
       "main.js",
       "preload.js",
-      "node_modules/**/*"
+      "node_modules/**/*",
+      "public/tangle.png",
+      "public/tangle.ico"
     ],
     "mac": {
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "icon": "public/tangle.png"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "public/tangle.ico"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "icon": "public/tangle.png"
     }
   }
 }
