@@ -61,12 +61,23 @@ const Sidebar = ({
     });
     
     if (newNote) {
-      onSelectNote(newNote.id);
+      // Dispatch custom event to open note editor
+      const editEvent = new CustomEvent('editNote', { detail: { noteId: newNote.id } });
+      document.dispatchEvent(editEvent);
     }
   };
 
   const handleNoteClick = (noteId) => {
     onSelectNote(noteId);
+    // Dispatch custom event to focus on note in graph
+    const focusEvent = new CustomEvent('focusOnNote', { detail: { noteId } });
+    document.dispatchEvent(focusEvent);
+  };
+
+  const handleNoteDoubleClick = (noteId) => {
+    // Dispatch custom event to open note editor
+    const editEvent = new CustomEvent('editNote', { detail: { noteId } });
+    document.dispatchEvent(editEvent);
   };
 
   const handleDeleteNote = (e, noteId) => {
@@ -229,6 +240,7 @@ const Sidebar = ({
                     selectedNote === note.id ? 'selected' : ''
                   } ${note.isMainNote ? 'main-note' : ''}`}
                   onClick={() => handleNoteClick(note.id)}
+                  onDoubleClick={() => handleNoteDoubleClick(note.id)}
                 >
                   <div className="note-header">
                     <div className="note-title">

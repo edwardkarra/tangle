@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import NoteGraph from './components/NoteGraph';
 import NoteEditor from './components/NoteEditor';
@@ -8,8 +8,10 @@ function App() {
   const [notes, setNotes] = useState({});
   const [connections, setConnections] = useState({});
   const [selectedNote, setSelectedNote] = useState(null);
+  const [editingNote, setEditingNote] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const noteGraphRef = useRef(null);
 
   // Load notes on app start
   useEffect(() => {
@@ -19,7 +21,7 @@ function App() {
     const handleKeyDown = (e) => {
       // Escape to close note editor
       if (e.key === 'Escape') {
-        setSelectedNote(null);
+        setEditingNote(null);
       }
       
       // Ctrl/Cmd + B to toggle sidebar
@@ -31,7 +33,7 @@ function App() {
     
     // Handle custom events from NoteGraph
     const handleEditNote = (e) => {
-      setSelectedNote(e.detail.noteId);
+      setEditingNote(e.detail.noteId);
     };
     
     const handleCreateNoteAtPosition = async (e) => {
@@ -42,13 +44,20 @@ function App() {
         position: { x, y }
       });
       if (newNote) {
-        setSelectedNote(newNote.id);
+        setEditingNote(newNote.id);
+      }
+    };
+    
+    const handleFocusOnNote = (e) => {
+      if (noteGraphRef.current && e.detail.noteId) {
+        noteGraphRef.current.focusOnNote(e.detail.noteId);
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('editNote', handleEditNote);
-    window.addEventListener('createNoteAtPosition', handleCreateNoteAtPosition);
+    document.addEventListener('editNote', handleEditNote);
+    document.addEventListener('createNoteAtPosition', handleCreateNoteAtPosition);
+    document.addEventListener('focusOnNote', handleFocusOnNote);
     
     // Handle app closing
     if (window.electronAPI) {
@@ -59,8 +68,9 @@ function App() {
     
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('editNote', handleEditNote);
-      window.removeEventListener('createNoteAtPosition', handleCreateNoteAtPosition);
+      document.removeEventListener('editNote', handleEditNote);
+      document.removeEventListener('createNoteAtPosition', handleCreateNoteAtPosition);
+      document.removeEventListener('focusOnNote', handleFocusOnNote);
       if (window.electronAPI) {
         window.electronAPI.removeAllListeners('app-closing');
       }
@@ -143,6 +153,9 @@ function App() {
             return newConnections;
           });
           
+          if (editingNote === noteId) {
+            setEditingNote(null);
+          }
           if (selectedNote === noteId) {
             setSelectedNote(null);
           }
@@ -151,7 +164,7 @@ function App() {
     } catch (error) {
       console.error('Error deleting note:', error);
     }
-  }, [selectedNote]);
+  }, [selectedNote, editingNote]);
 
   const createConnection = useCallback(async (fromId, toId) => {
     try {
@@ -208,6 +221,7 @@ function App() {
       
       <div className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <NoteGraph 
+          ref={noteGraphRef}
           notes={notes}
           connections={connections}
           selectedNote={selectedNote}
@@ -217,12 +231,12 @@ function App() {
           onUpdateNote={updateNote}
         />
         
-        {selectedNote && notes[selectedNote] && (
+        {editingNote && notes[editingNote] && (
           <NoteEditor 
-            note={notes[selectedNote]}
+            note={notes[editingNote]}
             onUpdateNote={updateNote}
             onDeleteNote={deleteNote}
-            onClose={() => setSelectedNote(null)}
+            onClose={() => setEditingNote(null)}
           />
         )}
       </div>

@@ -9,6 +9,7 @@ const HierarchyManager = ({
   selectedNoteId 
 }) => {
   const [expandedGroups, setExpandedGroups] = useState(new Set());
+  const [collapsedNotes, setCollapsedNotes] = useState(new Set());
   const [hierarchyData, setHierarchyData] = useState({ mainNotes: [], orphanNotes: [] });
   const [viewMode, setViewMode] = useState('hierarchy'); // 'hierarchy' or 'flat'
   const [sortBy, setSortBy] = useState('title'); // 'title', 'created', 'updated'
@@ -83,6 +84,16 @@ const HierarchyManager = ({
     setExpandedGroups(newExpanded);
   };
 
+  const toggleNoteCollapse = (noteId) => {
+    const newCollapsed = new Set(collapsedNotes);
+    if (newCollapsed.has(noteId)) {
+      newCollapsed.delete(noteId);
+    } else {
+      newCollapsed.add(noteId);
+    }
+    setCollapsedNotes(newCollapsed);
+  };
+
   const toggleMainNote = async (noteId) => {
     const note = notes.find(n => n.id === noteId);
     if (!note) return;
@@ -131,6 +142,8 @@ const HierarchyManager = ({
   const renderNote = (note, isChild = false, parentId = null) => {
     const isSelected = selectedNoteId === note.id;
     const connectionCount = getConnectionCount(note.id);
+    const hasChildren = note.children && note.children.length > 0;
+    const isCollapsed = collapsedNotes.has(note.id);
     
     return (
       <div 
@@ -167,6 +180,38 @@ const HierarchyManager = ({
                 )}
               </div>
             </div>
+            
+            {/* Selection-based action buttons */}
+            {isSelected && (
+              <div className="note-action-buttons">
+                {hasChildren && (
+                  <button
+                    className="collapse-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleNoteCollapse(note.id);
+                    }}
+                    title={isCollapsed ? 'Expand children' : 'Collapse children'}
+                  >
+                    <span className={`collapse-icon ${isCollapsed ? 'collapsed' : 'expanded'}`}>
+                      {isCollapsed ? '▶' : '▼'}
+                    </span>
+                  </button>
+                )}
+                <button
+                  className="main-toggle-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleMainNote(note.id);
+                  }}
+                  title={note.isMain ? 'Remove from main notes' : 'Make main note'}
+                >
+                  <span className="main-toggle-icon">
+                    {note.isMain ? '★' : '☆'}
+                  </span>
+                </button>
+              </div>
+            )}
             
             {!isChild && note.children && note.children.length > 0 && (
               <button
@@ -213,7 +258,7 @@ const HierarchyManager = ({
           <div key={mainNote.id} className="note-group">
             {renderNote(mainNote)}
             
-            {expandedGroups.has(mainNote.id) && mainNote.children.length > 0 && (
+            {expandedGroups.has(mainNote.id) && mainNote.children.length > 0 && !collapsedNotes.has(mainNote.id) && (
               <div className="children-container">
                 {mainNote.children.map(childNote => 
                   renderNote(childNote, true, mainNote.id)
@@ -489,6 +534,51 @@ const HierarchyManager = ({
         .connection-badge {
           background: #95a5a6;
           color: white;
+        }
+        
+        .note-action-buttons {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          align-items: center;
+        }
+        
+        .collapse-button,
+        .main-toggle-button {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          border: 1px solid #d1d5db;
+          background: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .collapse-button:hover {
+          background: #f8f9fa;
+          border-color: #3498db;
+          transform: scale(1.05);
+        }
+        
+        .main-toggle-button:hover {
+          background: #fff3cd;
+          border-color: #ffc107;
+          transform: scale(1.05);
+        }
+        
+        .collapse-icon {
+          color: #3498db;
+          font-weight: bold;
+        }
+        
+        .main-toggle-icon {
+          color: #ffc107;
+          font-size: 14px;
         }
         
         .expand-toggle {

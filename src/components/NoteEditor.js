@@ -5,14 +5,17 @@ const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
   const [content, setContent] = useState(note.content || '');
   const [isMainNote, setIsMainNote] = useState(note.isMainNote || false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const titleInputRef = useRef(null);
   const contentTextareaRef = useRef(null);
+  const autoSaveTimeoutRef = useRef(null);
 
   useEffect(() => {
     setTitle(note.title || '');
     setContent(note.content || '');
     setIsMainNote(note.isMainNote || false);
     setHasChanges(false);
+    setIsSaving(false);
   }, [note]);
 
   useEffect(() => {
@@ -22,25 +25,39 @@ const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
     }
   }, []);
 
+  // Auto-save functionality
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Ctrl/Cmd + S to save
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        handleSave();
+    if (hasChanges) {
+      // Clear existing timeout
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
       }
       
-      // Ctrl/Cmd + Enter to save and close
+      // Set new timeout for auto-save
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        handleSave();
+      }, 1000); // Auto-save after 1 second of inactivity
+    }
+    
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [title, content, isMainNote, hasChanges]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl/Cmd + Enter to close
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
-        handleSave();
         onClose();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [title, content, isMainNote]);
+  }, []);
 
   const handleTitleChange = (e) => {
     setTitle(e.target.value);
@@ -57,14 +74,21 @@ const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
     setHasChanges(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (hasChanges) {
-      onUpdateNote(note.id, {
-        title: title.trim(),
-        content: content.trim(),
-        isMainNote
-      });
-      setHasChanges(false);
+      setIsSaving(true);
+      try {
+        await onUpdateNote(note.id, {
+          title: title.trim(),
+          content: content.trim(),
+          isMainNote
+        });
+        setHasChanges(false);
+      } catch (error) {
+        console.error('Error saving note:', error);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -75,11 +99,16 @@ const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
   };
 
   const handleClose = () => {
-    if (hasChanges) {
-      if (window.confirm('You have unsaved changes. Do you want to save before closing?')) {
-        handleSave();
-      }
+    // Clear any pending auto-save
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
     }
+    
+    // Save immediately if there are changes
+    if (hasChanges) {
+      handleSave();
+    }
+    
     onClose();
   };
 
@@ -101,9 +130,10 @@ const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
       <div className="note-editor-header">
         <div className="note-editor-title">
           {note.title || 'Untitled Note'}
-          {hasChanges && <span className="unsaved-indicator">*</span>}
+          {isSaving && <span className="saving-indicator">Saving...</span>}
+          {hasChanges && !isSaving && <span className="unsaved-indicator">*</span>}
         </div>
-        <button className="close-btn" onClick={handleClose} title="Close (Esc)">
+        <button className="close-btn" onClick={handleClose} title="Close (Ctrl+Enter)">
           ×
         </button>
       </div>
@@ -180,17 +210,9 @@ const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
       
       <div className="note-controls">
         <button 
-          className="btn btn-primary" 
-          onClick={handleSave}
-          disabled={!hasChanges}
-          title="Save (Ctrl+S)"
-        >
-          Save
-        </button>
-        <button 
           className="btn btn-secondary" 
           onClick={handleClose}
-          title="Close (Esc)"
+          title="Close (Ctrl+Enter)"
         >
           Close
         </button>
@@ -246,6 +268,13 @@ const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
           color: #e74c3c;
           margin-left: 5px;
           font-weight: bold;
+        }
+        
+        .saving-indicator {
+          color: #3498db;
+          margin-left: 5px;
+          font-weight: bold;
+          font-size: 12px;
         }
         
         .note-stats {
