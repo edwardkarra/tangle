@@ -112,7 +112,7 @@ const Sidebar = ({
   };
 
   const getPreviewText = (note) => {
-    const text = note.content || '';
+    const text = note.description || '';
     return text.length > 100 ? text.substring(0, 100) + '...' : text;
   };
 

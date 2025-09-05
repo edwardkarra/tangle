@@ -84,12 +84,13 @@ const NoteGraph = forwardRef(({
             'color': '#2c3e50',
             'font-size': '12px',
             'text-wrap': 'wrap',
-            'text-max-width': '120px',
-            'width': 120,
-            'height': 100,
+            'text-max-width': '140px',
+            'width': 150,
+            'height': 120,
             'shape': 'rectangle',
             'border-width': 2,
-            'border-color': '#bdc3c7'
+            'border-color': '#bdc3c7',
+            'padding': '8px'
           }
         },
         {
@@ -97,8 +98,8 @@ const NoteGraph = forwardRef(({
           style: {
             'background-color': '#e74c3c',
             'border-color': '#c0392b',
-            'width': 140,
-            'height': 120
+            'width': 170,
+            'height': 140
           }
         },
         {
@@ -272,10 +273,12 @@ const NoteGraph = forwardRef(({
         return;
       }
 
-      // Create label with title and description preview
+      // Create label with title and description
       const title = note.title || 'Untitled';
-      const description = note.content ? note.content.substring(0, 50) : '';
-      const label = description ? `${title}\n${description}${note.content.length > 50 ? '...' : ''}` : title;
+      const description = note.description || '';
+      // Use uppercase title to make it stand out more
+      const formattedTitle = title.toUpperCase();
+      const label = description ? `${formattedTitle}\n\n${description}` : formattedTitle;
       
       elements.push({
         data: {

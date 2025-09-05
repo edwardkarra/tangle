@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
   const [title, setTitle] = useState(note.title || '');
+  const [description, setDescription] = useState(note.description || '');
   const [content, setContent] = useState(note.content || '');
   const [isMainNote, setIsMainNote] = useState(note.isMainNote || false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -12,6 +13,7 @@ const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
 
   useEffect(() => {
     setTitle(note.title || '');
+    setDescription(note.description || '');
     setContent(note.content || '');
     setIsMainNote(note.isMainNote || false);
     setHasChanges(false);
@@ -44,7 +46,7 @@ const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [title, content, isMainNote, hasChanges]);
+  }, [title, description, content, isMainNote, hasChanges]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -64,6 +66,15 @@ const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
     setHasChanges(true);
   };
 
+  const handleDescriptionChange = (e) => {
+    const value = e.target.value;
+    // Limit description to 50 characters
+    if (value.length <= 50) {
+      setDescription(value);
+      setHasChanges(true);
+    }
+  };
+
   const handleContentChange = (e) => {
     setContent(e.target.value);
     setHasChanges(true);
@@ -80,6 +91,7 @@ const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
       try {
         await onUpdateNote(note.id, {
           title: title.trim(),
+          description: description.trim(),
           content: content.trim(),
           isMainNote
         });
@@ -152,6 +164,24 @@ const NoteEditor = ({ note, onUpdateNote, onDeleteNote, onClose }) => {
             onChange={handleTitleChange}
             placeholder="Enter note title..."
           />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="note-description" className="form-label">
+            Description <span className="char-count">({description.length}/50)</span>
+          </label>
+          <input
+            id="note-description"
+            type="text"
+            className="note-input"
+            value={description}
+            onChange={handleDescriptionChange}
+            placeholder="Brief description for graph view (optional)..."
+            maxLength="50"
+          />
+          <div className="help-text">
+            This description will appear under the note title in the graph view
+          </div>
         </div>
         
         <div className="form-group">
