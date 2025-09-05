@@ -15,6 +15,19 @@ const NoteGraph = forwardRef(({
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingFrom, setConnectingFrom] = useState(null);
   const [collapsedNotes, setCollapsedNotes] = useState(new Set());
+  
+  // Refs to store current state values for event handlers
+  const isConnectingRef = useRef(false);
+  const connectingFromRef = useRef(null);
+  
+  // Keep refs synchronized with state
+  useEffect(() => {
+    isConnectingRef.current = isConnecting;
+  }, [isConnecting]);
+  
+  useEffect(() => {
+    connectingFromRef.current = connectingFrom;
+  }, [connectingFrom]);
 
   const toggleNoteCollapse = (noteId) => {
     setCollapsedNotes(prev => {
@@ -137,8 +150,8 @@ const NoteGraph = forwardRef(({
       const nodeId = evt.target.id();
       onSelectNote(nodeId);
       
-      if (isConnecting && connectingFrom && connectingFrom !== nodeId) {
-        onCreateConnection(connectingFrom, nodeId);
+      if (isConnectingRef.current && connectingFromRef.current && connectingFromRef.current !== nodeId) {
+        onCreateConnection(connectingFromRef.current, nodeId);
         setIsConnecting(false);
         setConnectingFrom(null);
         cytoscapeInstance.nodes().removeClass('connecting');
@@ -153,7 +166,7 @@ const NoteGraph = forwardRef(({
     cytoscapeInstance.on('tap', (evt) => {
       if (evt.target === cytoscapeInstance) {
         onSelectNote(null);
-        if (isConnecting) {
+        if (isConnectingRef.current) {
           setIsConnecting(false);
           setConnectingFrom(null);
           cytoscapeInstance.nodes().removeClass('connecting');
@@ -184,13 +197,13 @@ const NoteGraph = forwardRef(({
       evt.stopPropagation();
       const nodeId = evt.target.id();
       
-      if (!isConnecting) {
+      if (!isConnectingRef.current) {
         setIsConnecting(true);
         setConnectingFrom(nodeId);
         cytoscapeInstance.nodes().removeClass('connecting');
         evt.target.addClass('connecting');
-      } else if (connectingFrom && connectingFrom !== nodeId) {
-        onCreateConnection(connectingFrom, nodeId);
+      } else if (connectingFromRef.current && connectingFromRef.current !== nodeId) {
+        onCreateConnection(connectingFromRef.current, nodeId);
         setIsConnecting(false);
         setConnectingFrom(null);
         cytoscapeInstance.nodes().removeClass('connecting');
@@ -232,7 +245,7 @@ const NoteGraph = forwardRef(({
         container.removeEventListener('wheel', handleWheel);
       }
     };
-  }, [isConnecting, connectingFrom, onSelectNote, onCreateConnection, onDeleteConnection, onUpdateNote]);
+  }, [onSelectNote, onCreateConnection, onDeleteConnection, onUpdateNote]);
 
   useEffect(() => {
     if (!cy) return;
@@ -290,6 +303,7 @@ const NoteGraph = forwardRef(({
     // Store current viewport state before updating elements
     const currentZoom = cy.zoom();
     const currentPan = cy.pan();
+    const hasExistingElements = cy.elements().length > 0;
 
     cy.elements().remove();
     cy.add(elements);
@@ -299,8 +313,11 @@ const NoteGraph = forwardRef(({
       cy.getElementById(selectedNote).addClass('selected');
     }
 
+    // Only run layout if this is the initial load (no existing elements) and notes don't have positions
     const hasPositions = Object.values(notes).some(note => note.position);
-    if (!hasPositions && Object.keys(notes).length > 0) {
+    const shouldRunLayout = !hasPositions && Object.keys(notes).length > 0 && !hasExistingElements;
+    
+    if (shouldRunLayout) {
       cy.layout({
         name: 'circle',
         radius: 200,
@@ -308,7 +325,7 @@ const NoteGraph = forwardRef(({
         animationDuration: 500
       }).run();
     } else {
-      // Restore viewport state to prevent unwanted viewport changes
+      // Always restore viewport state to prevent unwanted viewport changes
       cy.zoom(currentZoom);
       cy.pan(currentPan);
     }
